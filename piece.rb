@@ -24,7 +24,7 @@ class Piece
     }
   }
   
-  attr_accessor :color, :position
+  attr_accessor :color, :position, :highlighted
   
   def initialize(*pos, board)
     @color = pos.first < 4 ? TEAM_COLORS[0] : TEAM_COLORS[1]
@@ -38,14 +38,19 @@ class Piece
   end
   
   def maybe_promote
-    self.king = true if (color == TEAM_COLORS[1] && position.first == 0) ||
+    @king = true if (color == TEAM_COLORS[1] && position.first == 0) ||
                    (color == TEAM_COLORS[0] && position.first == 7)
   end
   
-  def perform_slide(destination)
+  def perform_slide(destination, turn)
+    raise_not_your_turn(turn)
     move(destination)
   end
   
+  def raise_not_your_turn(turn)
+    raise "Not player #{@color} turn" unless turn == @color
+  end  
+    
   def move(destination)
     if @board.empty?(destination) && moves.include?(Vector[*destination])
       return @board.move(position, destination)
@@ -53,9 +58,10 @@ class Piece
     false
   end
   
-  def perform_jump(path)
+  def perform_jump(path, turn)
+    raise_not_your_turn(turn)
     path.each do |destination|
-      initial_pos = position
+      initial_pos = @position
       if move(destination)
         remove_piece( middle(initial_pos, destination))
       else
@@ -71,6 +77,7 @@ class Piece
   end
   
   def remove_piece(position)
+    @board.pieces[@color] -= 1
     @board[position] = Board::DEFAULT_VALUE
   end
   
@@ -96,11 +103,7 @@ class Piece
   end  
     
   def to_s
-    if position.first.even? ^ position.last.even?
-      return SYMBOLS[self.king][self.color].colorize(self.color)
-    else
-      return SYMBOLS[self.king][self.color].colorize(self.color).on_red
-    end
+    SYMBOLS[@king][self.color].colorize(self.color)
   end
 
 end

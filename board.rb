@@ -4,10 +4,15 @@ class Board
   
   DEFAULT_VALUE = nil
     
-  attr_accessor :grid
+  attr_accessor :grid, :pieces, :cursor
   
   def initialize
     @grid = Array.new(10){ Array.new(10){ DEFAULT_VALUE } }
+    @pieces = {
+      Piece::TEAM_COLORS[0] => 20,
+      Piece::TEAM_COLORS[1] => 20,
+    }
+    @cursor = [0,0]
     populate_board
   end
   
@@ -15,12 +20,9 @@ class Board
     piece = self[source]
     piece.position = destination
     self[destination] = piece
-    remove(source)
+    self[source] = DEFAULT_VALUE
+    self[destination].maybe_promote
     true
-  end
-  
-  def remove(pos)
-    self[pos] = DEFAULT_VALUE
   end
   
   def [](pos)
@@ -34,6 +36,16 @@ class Board
   def valid_position?(position, color)
     return true if empty?(position)    
     false
+  end
+  
+  def jump?(path, moving_piece_pos)
+    path.count > 1 || single_jump?(moving_piece_pos, path.first)
+  end
+  
+  def single_jump?(pos1, pos2)
+    distance = (Vector[*pos2] - Vector[*pos1])
+    distance = distance.inject(0){ |acumulator, coord| acumulator + (coord**2) }
+    Math.sqrt(distance) > 2
   end
   
   def valid_jump?(position)
@@ -73,10 +85,12 @@ class Board
           string = square.to_s
         end
         
-        if j.even? ^ i.even?
+        string = string.on_white if @cursor == [i,j]
+          
+        if j.even? ^ i.even? || @cursor == [i,j]
           row_s << string
         else
-          row_s << string.on_red
+          row_s << string.on_red 
         end
       end 
       board << "#{i}|".colorize(:red) + row_s
@@ -88,6 +102,3 @@ class Board
   end
   
 end
-
-board = Board.new
-puts board
